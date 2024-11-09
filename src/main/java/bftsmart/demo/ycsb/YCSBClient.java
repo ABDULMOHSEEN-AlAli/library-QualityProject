@@ -54,21 +54,42 @@ public class YCSBClient extends DB {
     public int delete(String arg0, String arg1) {
         throw new UnsupportedOperationException();
     }
+    /**
+     * Common functionality extracted from insert and update methods to handle
+     * ByteIterator conversion and message processing. This reduces code duplication
+     * and improves maintainability.
+     */
+    private int processRequest(String table, String key,
+                               HashMap<String, ByteIterator> values,
+                               boolean isInsert) {
+        HashMap<String, byte[]> map = convertByteIteratorToBytes(values);
+        YCSBMessage msg = isInsert ?
+                YCSBMessage.newInsertRequest(table, key, map) :
+                YCSBMessage.newUpdateRequest(table, key, map);
 
-    @Override
-    public int insert(String table, String key,
-                      HashMap<String, ByteIterator> values) {
+        byte[] reply = proxy.invokeOrdered(msg.getBytes());
+        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
+        return replyMsg.getResult();
+    }
 
+    /**
+     * Converts a HashMap of ByteIterator values to byte arrays
+     */
+    private HashMap<String, byte[]> convertByteIteratorToBytes(
+            HashMap<String, ByteIterator> values) {
         Iterator<String> keys = values.keySet().iterator();
         HashMap<String, byte[]> map = new HashMap<>();
         while (keys.hasNext()) {
             String field = keys.next();
             map.put(field, values.get(field).toArray());
         }
-        YCSBMessage msg = YCSBMessage.newInsertRequest(table, key, map);
-        byte[] reply = proxy.invokeOrdered(msg.getBytes());
-        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
-        return replyMsg.getResult();
+        return map;
+    }
+
+    @Override
+    public int insert(String table, String key,
+                      HashMap<String, ByteIterator> values) {
+        return processRequest(table, key, values, true);
     }
 
     @Override
@@ -90,16 +111,7 @@ public class YCSBClient extends DB {
     @Override
     public int update(String table, String key,
                       HashMap<String, ByteIterator> values) {
-        Iterator<String> keys = values.keySet().iterator();
-        HashMap<String, byte[]> map = new HashMap<>();
-        while (keys.hasNext()) {
-            String field = keys.next();
-            map.put(field, values.get(field).toArray());
-        }
-        YCSBMessage msg = YCSBMessage.newUpdateRequest(table, key, map);
-        byte[] reply = proxy.invokeOrdered(msg.getBytes());
-        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
-        return replyMsg.getResult();
+        return processRequest(table, key, values, false);
     }
 
 }
