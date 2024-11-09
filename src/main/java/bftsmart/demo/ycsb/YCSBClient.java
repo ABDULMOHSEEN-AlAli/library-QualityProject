@@ -54,22 +54,54 @@ public class YCSBClient extends DB {
     public int delete(String arg0, String arg1) {
         throw new UnsupportedOperationException();
     }
+    // ... other code
 
-    @Override
-    public int insert(String table, String key,
-                      HashMap<String, ByteIterator> values) {
+    private enum OperationType {
+        INSERT, UPDATE
+    }
 
+    /**
+     * Performs either an insert or update operation based on the given type.
+     *
+     * @param type The type of operation to perform (INSERT or UPDATE)
+     * @param table The table name
+     * @param key The key for the operation
+     * @param values A HashMap containing ByteIterators for the field values
+     * @return The result code from the server
+     */
+    private int performOperation(OperationType type, String table, String key, HashMap<String, ByteIterator> values) {
         Iterator<String> keys = values.keySet().iterator();
         HashMap<String, byte[]> map = new HashMap<>();
         while (keys.hasNext()) {
             String field = keys.next();
             map.put(field, values.get(field).toArray());
         }
-        YCSBMessage msg = YCSBMessage.newInsertRequest(table, key, map);
+
+        YCSBMessage
+        msg;
+        switch (type) {
+            case INSERT:
+                msg = YCSBMessage.newInsertRequest(table, key, map);
+                break;
+            case UPDATE:
+                msg = YCSBMessage.newUpdateRequest(table, key, map);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid operation type: " + type);
+        }
+
         byte[] reply = proxy.invokeOrdered(msg.getBytes());
         YCSBMessage replyMsg = YCSBMessage.getObject(reply);
         return replyMsg.getResult();
     }
+
+    @Override
+    public int
+    insert(String table, String key,
+           HashMap<String, ByteIterator> values) {
+        return performOperation(OperationType.INSERT, table, key, values);
+    }
+
 
     @Override
     public int read(String table, String key,
@@ -90,16 +122,6 @@ public class YCSBClient extends DB {
     @Override
     public int update(String table, String key,
                       HashMap<String, ByteIterator> values) {
-        Iterator<String> keys = values.keySet().iterator();
-        HashMap<String, byte[]> map = new HashMap<>();
-        while (keys.hasNext()) {
-            String field = keys.next();
-            map.put(field, values.get(field).toArray());
-        }
-        YCSBMessage msg = YCSBMessage.newUpdateRequest(table, key, map);
-        byte[] reply = proxy.invokeOrdered(msg.getBytes());
-        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
-        return replyMsg.getResult();
+        return performOperation(OperationType.UPDATE, table, key, values);
     }
-
 }
