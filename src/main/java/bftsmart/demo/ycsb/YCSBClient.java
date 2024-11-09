@@ -54,69 +54,26 @@ public class YCSBClient extends DB {
     public int delete(String arg0, String arg1) {
         throw new UnsupportedOperationException();
     }
-    /**
-     * Creates a new YCSBMessage for insert operation and sends it to the server using proxy.invokeOrdered
-     *
-     * @param table The table name
-     * @param key The key for the operation
-     * @param map The HashMap containing byte arrays for the field values
-     * @return The result code from the server
-     */
-    private int performInsert(String table, String key, HashMap<String, byte[]> map) {
-        YCSBMessage msg = YCSBMessage.newInsertRequest(table, key, map);
-        byte[] reply = proxy.invokeOrdered(msg.getBytes());
-        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
-        return replyMsg.getResult();
 
-    }
+    @Override
+    public int insert(String table, String key,
+                      HashMap<String, ByteIterator> values) {
 
-    /**
-     * Prepares a HashMap containing byte arrays from ByteIterators and calls a new helper method to perform the actual operation (insert or update) on the server.
-     *
-     * @param table The table name
-     * @param key The key for the operation
-     * @param values A HashMap containing ByteIterators for the field values
-     * @return The result code from the server
-     */
-    private int performOperation(String table, String key, HashMap<String, ByteIterator> values) {
         Iterator<String> keys = values.keySet().iterator();
         HashMap<String, byte[]> map = new HashMap<>();
         while (keys.hasNext()) {
             String field = keys.next();
-            map.put(field, values.get(field).toArray()); 
-
+            map.put(field, values.get(field).toArray());
         }
-        // Delegate the actual operation (insert or update) to a separate method based on the caller
-        if ("insert".equals(new Throwable().getStackTrace()[1].getMethodName())) {
-            return performInsert(table, key, map);
-        } else {
-            return performUpdate(table, key, map);
-        }
-    }
-    /**
-     * Creates a new YCSBMessage for update operation and sends it to the server using proxy.invokeOrdered
-     *
-     * @param table The table name
-     * @param key The key for the operation
-     * @param map The HashMap containing byte arrays for the field values
-     * @return The result code from the server
-     */
-    private int performUpdate(String table, String key, HashMap<String, byte[]> map) {
-        YCSBMessage msg = YCSBMessage.newUpdateRequest(table, key, map);
+        YCSBMessage msg = YCSBMessage.newInsertRequest(table, key, map);
         byte[] reply = proxy.invokeOrdered(msg.getBytes());
         YCSBMessage replyMsg = YCSBMessage.getObject(reply);
         return replyMsg.getResult();
-
-    }
-    @Override
-    public int insert(String table, String key,
-                      HashMap<String, ByteIterator> values) {
-        return performOperation(table, key, values);
     }
 
     @Override
     public int read(String table, String key,
-            Set<String> fields, HashMap<String, ByteIterator> result) {
+                    Set<String> fields, HashMap<String, ByteIterator> result) {
         HashMap<String, byte[]> results = new HashMap<>();
         YCSBMessage request = YCSBMessage.newReadRequest(table, key, fields, results);
         byte[] reply = proxy.invokeUnordered(request.getBytes());
@@ -126,14 +83,23 @@ public class YCSBClient extends DB {
 
     @Override
     public int scan(String arg0, String arg1, int arg2, Set<String> arg3,
-            Vector<HashMap<String, ByteIterator>> arg4) {
+                    Vector<HashMap<String, ByteIterator>> arg4) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public int update(String table, String key,
                       HashMap<String, ByteIterator> values) {
-        return performOperation(table, key, values);
+        Iterator<String> keys = values.keySet().iterator();
+        HashMap<String, byte[]> map = new HashMap<>();
+        while (keys.hasNext()) {
+            String field = keys.next();
+            map.put(field, values.get(field).toArray());
+        }
+        YCSBMessage msg = YCSBMessage.newUpdateRequest(table, key, map);
+        byte[] reply = proxy.invokeOrdered(msg.getBytes());
+        YCSBMessage replyMsg = YCSBMessage.getObject(reply);
+        return replyMsg.getResult();
     }
 
 }
