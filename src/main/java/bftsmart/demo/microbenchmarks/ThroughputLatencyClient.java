@@ -232,7 +232,19 @@ public class ThroughputLatencyClient {
             }
             
         }
-
+        // New method to handle sleep logic
+        private void sleepInterval() {
+            try {
+                if (interval > 0) {
+                    Thread.sleep(interval);
+                } else if (this.rampup > 0) {
+                    Thread.sleep(this.rampup);
+                }
+                this.rampup -= 100;
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
         public void run() {
             
             System.out.println("Warm up...");
@@ -261,21 +273,12 @@ public class ThroughputLatencyClient {
 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
 
-		try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+                // Replace the duplicate code with a call to the new method
+                try {
+                    sleepInterval();
+                } catch (Error ex) {
+                    ex.printStackTrace();
+                }
             }
 
             Storage st = new Storage(numberOfOps / 2);
@@ -301,22 +304,12 @@ public class ThroughputLatencyClient {
                 if (verbose) System.out.println(this.id + " // sent!");
                 st.store(latency);
 
-                
-                    try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+                // Replace the duplicate code with a call to the new method
+                try {
+                    sleepInterval();
+                } catch (Error ex) {
+                    ex.printStackTrace();
+                }
                 
                                 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
