@@ -232,6 +232,17 @@ public class ThroughputLatencyClient {
             }
             
         }
+        // Refactored method to handle sleep intervals with ramp-up adjustments
+        private void applySleepInterval() throws InterruptedException {
+            // Decide sleep interval based on the set interval and ramp-up time
+            int sleepTime = interval > 0 ? interval : (this.rampup > 0 ? this.rampup : 0);
+
+            // Apply sleep if there's any time to sleep
+            if (sleepTime > 0) {
+                Thread.sleep(sleepTime);
+                if (this.rampup > 0) this.rampup -= 100;  // Reduce ramp-up time by 100ms if used
+            }
+        }
 
         public void run() {
             
@@ -261,21 +272,12 @@ public class ThroughputLatencyClient {
 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
 
-		try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+                // Usage of applySleepInterval in the run() method
+                try {
+                    applySleepInterval();  // Use helper method to handle sleep logic
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
             }
 
             Storage st = new Storage(numberOfOps / 2);
@@ -301,22 +303,13 @@ public class ThroughputLatencyClient {
                 if (verbose) System.out.println(this.id + " // sent!");
                 st.store(latency);
 
-                
-                    try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+
+                // Usage of applySleepInterval in the run() method
+                try {
+                    applySleepInterval();  // Use helper method to handle sleep logic
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
                 
                                 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
