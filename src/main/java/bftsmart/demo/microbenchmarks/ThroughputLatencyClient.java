@@ -35,6 +35,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -232,7 +233,20 @@ public class ThroughputLatencyClient {
             }
             
         }
-
+        private void sleepBeforeNextRequest() throws InterruptedException {
+            Optional.ofNullable(interval > 0 ? interval : rampup > 0 ? rampup : 0)
+                    .filter(sleepTime -> sleepTime > 0)
+                    .ifPresent(sleepTime -> {
+                        try {
+                            Thread.sleep(sleepTime);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        if (sleepTime == rampup) {
+                            rampup -= 100;
+                        }
+                    });
+        }
         public void run() {
             
             System.out.println("Warm up...");
@@ -261,21 +275,11 @@ public class ThroughputLatencyClient {
 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
 
-		try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+                try {
+                    sleepBeforeNextRequest();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
             Storage st = new Storage(numberOfOps / 2);
@@ -301,24 +305,14 @@ public class ThroughputLatencyClient {
                 if (verbose) System.out.println(this.id + " // sent!");
                 st.store(latency);
 
-                
-                    try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                
-                                
+
+                try {
+                    sleepBeforeNextRequest();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
             }
 
