@@ -162,7 +162,29 @@ public class ThroughputLatencyClient {
 
         System.out.println("All clients done.");
     }
+    // Add this as a static nested class inside ThroughputLatencyClient
+    static class SleepManager {
+        private final int interval;
+        private int rampup;
 
+        public SleepManager(int interval, int initialRampup) {
+            this.interval = interval;
+            this.rampup = initialRampup;
+        }
+
+        public void executeSleep() {
+            try {
+                if (interval > 0) {
+                    Thread.sleep(interval);
+                } else if (rampup > 0) {
+                    Thread.sleep(rampup);
+                    rampup = Math.max(0, rampup - 100);
+                }
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
     static class Client extends Thread {
 
         int id;
@@ -174,7 +196,9 @@ public class ThroughputLatencyClient {
         ServiceProxy proxy;
         byte[] request;
         int rampup = 1000;
-        
+        private final SleepManager sleepManager;
+
+
         public Client(int id, int numberOfOps, int requestSize, int interval, boolean readOnly, boolean verbose, int sign) {
             super("Client "+id);
         
@@ -186,7 +210,8 @@ public class ThroughputLatencyClient {
             this.verbose = verbose;
             this.proxy = new ServiceProxy(id);
             this.request = new byte[this.requestSize];
-            
+            this.sleepManager = new SleepManager(interval, 1000);
+
             Random rand = new Random(System.nanoTime() + this.id);
             rand.nextBytes(request);
                                 
@@ -261,21 +286,7 @@ public class ThroughputLatencyClient {
 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
 
-		try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+                sleepManager.executeSleep();
             }
 
             Storage st = new Storage(numberOfOps / 2);
@@ -301,22 +312,8 @@ public class ThroughputLatencyClient {
                 if (verbose) System.out.println(this.id + " // sent!");
                 st.store(latency);
 
-                
-                    try {
-                        
-                        //sleeps interval ms before sending next request
-                        if (interval > 0) {
-                            
-                            Thread.sleep(interval);
-                        }
-                        else if (this.rampup > 0) {
-                            Thread.sleep(this.rampup);
-                        }
-                        this.rampup -= 100;
-                        
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+
+                sleepManager.executeSleep();
                 
                                 
                 if (verbose && (req % 1000 == 0)) System.out.println(this.id + " // " + req + " operations sent!");
